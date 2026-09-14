@@ -24,7 +24,7 @@ public class DocumentValidatorTests
     public void Validate_RejectsEmptyFile()
     {
         var errors = DocumentValidator.Validate(Upload("empty.txt", "text/plain", 0), Options);
-        Assert.DoesNotContain("File is empty.", errors);
+        Assert.Contains("File is empty.", errors);
     }
 
     [Fact]

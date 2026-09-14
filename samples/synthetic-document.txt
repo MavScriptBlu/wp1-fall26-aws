@@ -1,0 +1,2 @@
+This is a tiny synthetic test file used for Part 2-4 upload verification
+and the Part 5 curl smoke test. It contains nothing sensitive.

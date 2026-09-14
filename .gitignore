@@ -1,0 +1,12 @@
+## dotnet
+bin/
+obj/
+*.user
+.vs/
+
+## dev-only secrets - never committed
+appsettings.Development.json
+appsettings.*.local.json
+
+## Elastic Beanstalk (Part 5)
+.elasticbeanstalk/

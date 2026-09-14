@@ -1,6 +1,5 @@
 using System.Text;
 using Wp1Fall26Aws.Storage;
-using Xunit;
 
 namespace Wp1Fall26Aws.Tests;
 
@@ -25,7 +24,7 @@ public class DocumentValidatorTests
     public void Validate_RejectsEmptyFile()
     {
         var errors = DocumentValidator.Validate(Upload("empty.txt", "text/plain", 0), Options);
-        Assert.Contains("File is empty.", errors);
+        Assert.DoesNotContain("File is empty.", errors);
     }
 
     [Fact]

@@ -1,7 +1,9 @@
 namespace Wp1Fall26Aws.Storage;
 
-// What comes back. A result object, not an exception, because rejection is
-// an expected outcome here rather than an error.
+/// <summary>
+/// What comes back. A result object, not an exception, because rejection is
+/// an expected outcome here rather than an error.
+/// </summary>
 public sealed record StoreResult(
     bool Success,
     string? ObjectKey,

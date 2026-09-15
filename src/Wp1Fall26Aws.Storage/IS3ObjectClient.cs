@@ -1,5 +1,8 @@
 namespace Wp1Fall26Aws.Storage;
 
+/// <summary>
+/// Interface for a client that can interact with S3 objects.
+/// </summary>
 public interface IS3ObjectClient
 {
     Task PutObjectAsync(

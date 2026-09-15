@@ -3,6 +3,14 @@ bin/
 obj/
 *.user
 .vs/
+.remember/*
+.remember
+.remember/
+.claude/*
+.claude
+.claude/
+deploy.zip
+publish/
 
 ## dev-only secrets - never committed
 appsettings.Development.json
@@ -10,3 +18,8 @@ appsettings.*.local.json
 
 ## Elastic Beanstalk (Part 5)
 .elasticbeanstalk/
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml

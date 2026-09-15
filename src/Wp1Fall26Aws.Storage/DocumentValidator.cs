@@ -2,6 +2,9 @@ namespace Wp1Fall26Aws.Storage;
 
 // Enforced before any S3 call. Every limit comes from S3StorageOptions so
 // it stays configurable.
+/// <summary>
+/// A class that provides validation for document uploads.
+/// </summary>
 public static class DocumentValidator
 {
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -9,11 +12,18 @@ public static class DocumentValidator
         ".txt", ".pdf", ".png", ".jpg", ".jpeg"
     };
 
+    /// <summary>
+    /// The set of allowed content types.
+    /// </summary>
     private static readonly HashSet<string> AllowedContentTypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "text/plain", "application/pdf", "image/png", "image/jpeg"
     };
 
+    /// <summary>
+    /// Checks size, extension, and content type against the given options. Returns an
+    /// empty list when the upload passes; otherwise one entry per failed rule.
+    /// </summary>
     public static IReadOnlyList<string> Validate(DocumentUpload upload, S3StorageOptions options)
     {
         var errors = new List<string>();

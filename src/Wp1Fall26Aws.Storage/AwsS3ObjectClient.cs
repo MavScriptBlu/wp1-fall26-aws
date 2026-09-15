@@ -3,8 +3,10 @@ using Amazon.S3.Model;
 
 namespace Wp1Fall26Aws.Storage;
 
-// The thin real implementation wrapping IAmazonS3. This is the only class
-// in the project that touches the AWS SDK directly.
+/// <summary>
+/// The thin real implementation wrapping IAmazonS3. This is the only class
+/// in the project that touches the AWS SDK directly.
+/// </summary>
 public sealed class AwsS3ObjectClient : IS3ObjectClient
 {
     private readonly IAmazonS3 _s3;
@@ -14,6 +16,10 @@ public sealed class AwsS3ObjectClient : IS3ObjectClient
         _s3 = s3;
     }
 
+    /// <summary>
+    /// Uploads the stream to S3 as a single PutObject call and attaches the given
+    /// metadata to the object.
+    /// </summary>
     public async Task PutObjectAsync(
         string bucket,
         string key,

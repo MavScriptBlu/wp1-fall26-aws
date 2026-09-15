@@ -1,7 +1,13 @@
+
+
 using Microsoft.Extensions.Options;
 
 namespace Wp1Fall26Aws.Storage;
 
+/// <summary>
+/// S3-backed <see cref="IDocumentStore"/>. Validates an upload, then writes it to the
+/// configured bucket under a date-partitioned key.
+/// </summary>
 public sealed class S3DocumentStore : IDocumentStore
 {
     private readonly IS3ObjectClient _client;
@@ -13,6 +19,10 @@ public sealed class S3DocumentStore : IDocumentStore
         _options = options.Value;
     }
 
+    /// <summary>
+    /// Validates the upload and, if it passes, stores it in S3. Returns the validation
+    /// errors instead of throwing when the upload is rejected.
+    /// </summary>
     public async Task<StoreResult> StoreAsync(DocumentUpload upload, CancellationToken ct = default)
     {
         var errors = DocumentValidator.Validate(upload, _options);
@@ -29,6 +39,10 @@ public sealed class S3DocumentStore : IDocumentStore
         return new StoreResult(true, key, Array.Empty<string>(), metadata);
     }
 
+    /// <summary>
+    /// Builds the S3 object key: "{prefix}/yyyy/MM/dd/{new guid}{original extension}".
+    /// The date partition keeps a bucket from growing one flat, unbrowsable folder.
+    /// </summary>
     private string BuildKey(string fileName)
     {
         var now = DateTime.UtcNow;
@@ -37,6 +51,10 @@ public sealed class S3DocumentStore : IDocumentStore
         return $"{_options.KeyPrefix}/{now:yyyy}/{now:MM}/{now:dd}/{id}{ext}";
     }
 
+    /// <summary>
+    /// Captures the upload's original filename, content type, size, and upload time
+    /// as S3 object metadata, since the generated key doesn't preserve any of that.
+    /// </summary>
     private static IReadOnlyDictionary<string, string> BuildMetadata(DocumentUpload upload)
     {
         return new Dictionary<string, string>

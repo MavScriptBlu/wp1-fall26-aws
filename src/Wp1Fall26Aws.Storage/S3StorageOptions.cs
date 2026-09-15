@@ -1,5 +1,8 @@
 namespace Wp1Fall26Aws.Storage;
 
+/// <summary>
+/// Options for configuring the S3 storage.
+/// </summary>
 public sealed class S3StorageOptions
 {
     public string BucketName { get; set; } = string.Empty;

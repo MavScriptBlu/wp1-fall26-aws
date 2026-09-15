@@ -1,13 +1,16 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>feeaa038-3608-449b-b5cc-ea61abe4ecf4</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="4.0.101.3" />
+    <PackageReference Include="AWSSDK.SSO" Version="4.0.100.16" />
+    <PackageReference Include="AWSSDK.SSOOIDC" Version="4.0.100.15" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
   </ItemGroup>
 

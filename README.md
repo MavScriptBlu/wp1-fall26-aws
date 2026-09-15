@@ -100,3 +100,27 @@ dotnet test Wp1Fall26Aws.slnx
 
 All of them run offline - no AWS account needed, no network calls. That's
 intentional so anyone can clone this and run the test suite with zero setup.
+
+## Troubleshooting
+
+Ran into a bunch of this myself getting the app talking to S3 locally, so here's what actually broke and how I fixed it:
+
+**"Unable to get IAM security credentials" / "Failed to resolve AWS credentials"**
+No AWS login active. Run `aws sso login`, sign in, try again. 
+Sessions expire after 4 hours.
+
+**"No RegionEndpoint or ServiceURL configured"**
+Region isn't set. Run `aws configure set region us-east-1`.
+
+**"BucketName is a required property..."**
+Bucket name isn't set locally. Set it with user secrets: `dotnet user-secrets set "S3Storage:BucketName" "your-bucket-name-here"`
+
+**"Access Denied" from S3**
+Usually means you're logged into the wrong AWS account/identity. Check with `aws sts get-caller-identity` and make sure the account number matches where your bucket actually lives.
+
+**"Assembly AWSSDK.SSOOIDC/AWSSDK.SSO could not be found"**
+Using an SSO login needs two extra  packages the base project doesn't ship with:
+`dotnet add src/Wp1Fall26Aws.Api package AWSSDK.SSOOIDC`
+`dotnet add src/Wp1Fall26Aws.Api package AWSSDK.SSO`
+
+

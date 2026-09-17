@@ -12,6 +12,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: wp1-fall26-aws-env
     steps:
     - uses: actions/checkout@v4
     
@@ -48,7 +49,7 @@ jobs:
 
     - name: Create application version
       run: |
-        aws elasticbeastalk create-application-version \
+        aws elasticbeanstalk create-application-version \
           --application-name wp1-fall26-aws \
           --version-label ${{ github.sha }} \
           --source-bundle S3Bucket="${{ env.EB_BUCKET }}",S3Key="wp1-fall26-aws/deploy-${{ github.sha }}.zip"
@@ -57,4 +58,4 @@ jobs:
       run: |
         aws elasticbeanstalk update-environment \
           --environment-name wp1-fall26-aws-env \
-          --versiion-label ${{ github.sha }}
+          --version-label ${{ github.sha }}

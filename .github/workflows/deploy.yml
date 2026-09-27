@@ -12,6 +12,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: wp1-fall26-aws-env
     steps:
     - uses: actions/checkout@v4
     

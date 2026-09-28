@@ -31,7 +31,15 @@ jobs:
       run: |
         cd publish
         zip -r ../deploy.zip .
-
+        
+    - name: Debug OIDC token
+      run: |
+        echo "Fetching OIDC token..."
+        TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+        "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
+        echo "OIDC token:"
+        echo "$TOKEN"
+        
     - name: Debug OIDC Token Claims
       run: |
           # Request an OIDC token from GitHub's internal token service

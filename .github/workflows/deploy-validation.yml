@@ -1,0 +1,27 @@
+name: Deploy Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-package:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: "10.0.x"
+
+    - name: Publish
+      run: dotnet publish src/Wp1Fall26Aws.Api -c Release -o publish
+
+    - name: Add Procfile to publish output
+      run: cp Procfile publish/Procfile
+    
+    - name: Zip deployment package
+      run: |
+        cd publish
+        zip -r ../deploy.zip .

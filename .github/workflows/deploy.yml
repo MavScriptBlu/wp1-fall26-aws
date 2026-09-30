@@ -42,13 +42,13 @@ jobs:
 
     - name: Upload deployment package to the EB storage bucket
       run: |
-        BUCKET=$(aws elasticbeanstalk create-storage-location --query 'S3Bucket' --output text)
-        echo "EB_BUCKET=$BUCKET" >> "$GITHUB_ENV"
-        aws s3 cp deploy.zip "s3://$BUCKET/wp1-fall26-aws/deploy-${{ github.sha }}.zip"
+        EB_BUCKET="elasticbeanstalk-us-east-1-407525819435"
+        echo "EB_BUCKET=$EB_BUCKET" >> "$GITHUB_ENV"
+        aws s3 cp deploy.zip "s3://$EB_BUCKET/wp1-fall26-aws/deploy-${{ github.sha }}.zip"
 
     - name: Create application version
       run: |
-        aws elasticbeastalk create-application-version \
+        aws elasticbeanstalk create-application-version \
           --application-name wp1-fall26-aws \
           --version-label ${{ github.sha }} \
           --source-bundle S3Bucket="${{ env.EB_BUCKET }}",S3Key="wp1-fall26-aws/deploy-${{ github.sha }}.zip"
@@ -57,4 +57,4 @@ jobs:
       run: |
         aws elasticbeanstalk update-environment \
           --environment-name wp1-fall26-aws-env \
-          --versiion-label ${{ github.sha }}
+          --version-label ${{ github.sha }}

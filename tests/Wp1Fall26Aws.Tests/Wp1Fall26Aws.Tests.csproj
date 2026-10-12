@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Wp1Fall26Aws.Api\Wp1Fall26Aws.Api.csproj" />
     <ProjectReference Include="..\..\src\Wp1Fall26Aws.Storage\Wp1Fall26Aws.Storage.csproj" />
   </ItemGroup>
 

@@ -68,4 +68,18 @@ public class DocumentValidatorTests
         var errors = DocumentValidator.Validate(Upload("virus.exe", "application/zip", 0), Options);
         Assert.True(errors.Count >= 3);
     }
+
+    [Fact]
+    public void Validate_FileWithNoExtension_ReturnsExtensionError()
+    {
+        // Arrange: a valid size and content type, so ONLY the extension rule can fail.
+        var upload = Upload("README", "text/plain", 1024);
+
+        // Act
+        var errors = DocumentValidator.Validate(upload, Options);
+
+        // Assert: exactly one error, and it is the extension one.
+        var error = Assert.Single(errors);
+        Assert.Contains("Extension", error);
+    }
 }

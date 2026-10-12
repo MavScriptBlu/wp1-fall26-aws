@@ -1,62 +1,71 @@
-name: Deploy
+name: Build, test, and deploy
 
+# PRs into main: build + test only (deploy is skipped by the if: below).
+# Pushes to main: build, test, then deploy. The manual button works too.
 on:
-  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
   push:
     branches: [ main ]
+  workflow_dispatch:
 
+# Default for every job: read the repo, nothing else.
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  deploy:
+  build-test:
     runs-on: ubuntu-latest
-#    environment: wp1-fall26-aws-env
     steps:
-    - uses: actions/checkout@v4
-    
+    - name: Check out repository
+      uses: actions/checkout@v4
+
     - name: Set up .NET 10
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: "10.0.x"
 
-    - name: Publish
-      run: dotnet publish src/Wp1Fall26Aws.Api -c Release -o publish
+    - name: Restore
+      run: dotnet restore Wp1Fall26Aws.slnx
+
+    - name: Build
+      run: dotnet build Wp1Fall26Aws.slnx --configuration Release --no-restore
+
+    # THE GATE: a failing test fails this job, which skips deploy.
+    - name: Test
+      run: dotnet test Wp1Fall26Aws.slnx --configuration Release --no-build
+
+    - name: Publish the API
+      run: dotnet publish src/Wp1Fall26Aws.Api/Wp1Fall26Aws.Api.csproj --configuration Release --no-build --output ./publish
 
     - name: Add Procfile to publish output
       run: cp Procfile publish/Procfile
-    
+
+    # Hand the exact tested build to the deploy job (it runs on a different machine).
+    - name: Upload the tested build as an artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: api-publish
+        path: ./publish
+
+  deploy:
+    needs: build-test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # only this job may request an OIDC token for AWS
+    steps:
+    - name: Download the tested build
+      uses: actions/download-artifact@v5
+      with:
+        name: api-publish
+        path: ./publish
+
     - name: Zip deployment package
       run: |
         cd publish
         zip -r ../deploy.zip .
-        
-    - name: Debug OIDC token
-      run: |
-        echo "Fetching OIDC token..."
-        TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-        "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
-        echo "OIDC token:"
-        echo "$TOKEN"
-        
-    - name: Debug OIDC Token Claims
-      run: |
-          # Request an OIDC token from GitHub's internal token service
-          RESPONSE=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
- 
-          TOKEN=$(echo "$RESPONSE" | jq -r '.value')
- 
-          # Extract and decode the middle part (the payload/claims)
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
-          # base64url -> base64, then re-pad to a multiple of 4 so base64 -d won't truncate
-          PAYLOAD=$(echo "$PAYLOAD" | tr '_-' '/+')
-          while [ $(( ${#PAYLOAD} % 4 )) -ne 0 ]; do PAYLOAD="${PAYLOAD}="; done
-          DECODED=$(echo "$PAYLOAD" | base64 -d 2>/dev/null)
- 
-          echo "=== OIDC CLAIMS FROM GITHUB ==="
-          echo "$DECODED" | jq '{aud, iss, sub, repository, repository_owner, ref}'
 
     - name: Configure AWS credentials (OIDC, no long-lived keys)
       uses: aws-actions/configure-aws-credentials@v4

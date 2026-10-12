@@ -80,4 +80,19 @@ public class S3DocumentStoreTests
 
         Assert.Equal("my-custom-bucket", fake.Calls.Single().Bucket);
     }
+
+    [Fact]
+    public async Task StoreAsync_CustomKeyPrefix_StartsKeyWithThatPrefix()
+    {
+        // Arrange: a fake S3 client and options with a non-default prefix.
+        var fake = new FakeS3ObjectClient();
+        var store = MakeStore(fake, new S3StorageOptions { BucketName = "test-bucket", KeyPrefix = "reports/q3" });
+
+        // Act
+        var result = await store.StoreAsync(Upload());
+
+        // Assert: the key we return AND the key the fake was given both use the prefix.
+        Assert.StartsWith("reports/q3/", result.ObjectKey);
+        Assert.Equal(result.ObjectKey, fake.Calls.Single().Key);
+    }
 }

@@ -59,3 +59,5 @@ app.MapPost("/documents", async (HttpRequest request, IDocumentStore store, ILog
 });
 
 app.Run();
+
+public partial class Program;

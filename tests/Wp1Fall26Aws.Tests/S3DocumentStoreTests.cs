@@ -80,4 +80,20 @@ public class S3DocumentStoreTests
 
         Assert.Equal("my-custom-bucket", fake.Calls.Single().Bucket);
     }
+
+    [Fact]
+    public async Task StoreAsync_CustomPrefixAndUppercaseExtension_KeyUsesPrefixAndLowercaseExtension()
+    {
+        // Arrange: a custom key prefix and a file name with an UPPERCASE extension.
+        var fake = new FakeS3ObjectClient();
+        var store = MakeStore(fake, new S3StorageOptions { BucketName = "test-bucket", KeyPrefix = "club/files" });
+
+        // Act
+        var result = await store.StoreAsync(Upload(fileName: "PHOTO.PNG", contentType: "image/png"));
+
+        // Assert: the key starts with the configured prefix and the extension is lowercased.
+        Assert.True(result.Success);
+        Assert.StartsWith("club/files/", result.ObjectKey);
+        Assert.EndsWith(".png", result.ObjectKey);
+    }
 }

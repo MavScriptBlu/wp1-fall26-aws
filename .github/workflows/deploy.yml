@@ -1,87 +1,93 @@
-name: Deploy
+name: Build, test, and deploy
 
+# What starts this workflow.
 on:
-  workflow_dispatch:
-  push:
+  pull_request:          # PRs into main: build and test only (deploy is skipped by its if: below)
     branches: [ main ]
+  push:                  # merges/pushes to main: build, test, then deploy
+    branches: [ main ]
+  workflow_dispatch:     # manual "Run workflow" button
 
+# Default token permissions for every job: read the repo, nothing else.
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  deploy:
+  build-test:
     runs-on: ubuntu-latest
-#    environment: wp1-fall26-aws-env
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up .NET 10
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: "10.0.x"
+      - name: Check out repository
+        uses: actions/checkout@v4
 
-    - name: Publish
-      run: dotnet publish src/Wp1Fall26Aws.Api -c Release -o publish
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
 
-    - name: Add Procfile to publish output
-      run: cp Procfile publish/Procfile
-    
-    - name: Zip deployment package
-      run: |
-        cd publish
-        zip -r ../deploy.zip .
-        
-    - name: Debug OIDC token
-      run: |
-        echo "Fetching OIDC token..."
-        TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-        "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
-        echo "OIDC token:"
-        echo "$TOKEN"
-        
-    - name: Debug OIDC Token Claims
-      run: |
-          # Request an OIDC token from GitHub's internal token service
-          RESPONSE=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com")
- 
-          TOKEN=$(echo "$RESPONSE" | jq -r '.value')
- 
-          # Extract and decode the middle part (the payload/claims)
-          PAYLOAD=$(echo "$TOKEN" | cut -d. -f2)
-          # base64url -> base64, then re-pad to a multiple of 4 so base64 -d won't truncate
-          PAYLOAD=$(echo "$PAYLOAD" | tr '_-' '/+')
-          while [ $(( ${#PAYLOAD} % 4 )) -ne 0 ]; do PAYLOAD="${PAYLOAD}="; done
-          DECODED=$(echo "$PAYLOAD" | base64 -d 2>/dev/null)
- 
-          echo "=== OIDC CLAIMS FROM GITHUB ==="
-          echo "$DECODED" | jq '{aud, iss, sub, repository, repository_owner, ref}'
+      - name: Restore packages
+        run: dotnet restore Wp1Fall26Aws.slnx
 
-    - name: Configure AWS credentials (OIDC, no long-lived keys)
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        role-to-assume: ${{ vars.AWS_DEPLOY_ROLE }}
-        aws-region: us-east-1
+      - name: Build
+        run: dotnet build Wp1Fall26Aws.slnx --configuration Release --no-restore
 
-    - name: Confirm identity
-      run: aws sts get-caller-identity
+      - name: Test                     # THE GATE: one failing test fails this job, and deploy never runs
+        run: dotnet test Wp1Fall26Aws.slnx --configuration Release --no-build
 
-    - name: Upload deployment package to the EB storage bucket
-      run: |
-        EB_BUCKET="elasticbeanstalk-us-east-1-407525819435"
-        echo "EB_BUCKET=$EB_BUCKET" >> "$GITHUB_ENV"
-        aws s3 cp deploy.zip "s3://$EB_BUCKET/wp1-fall26-aws/deploy-${{ github.sha }}.zip"
+      - name: Publish the API
+        run: dotnet publish src/Wp1Fall26Aws.Api/Wp1Fall26Aws.Api.csproj --configuration Release --no-build --output ./publish
 
-    - name: Create application version
-      run: |
-        aws elasticbeanstalk create-application-version \
-          --application-name wp1-fall26-aws \
-          --version-label ${{ github.sha }} \
-          --source-bundle S3Bucket="${{ env.EB_BUCKET }}",S3Key="wp1-fall26-aws/deploy-${{ github.sha }}.zip"
+      - name: Add Procfile to publish output
+        run: cp Procfile ./publish/Procfile
 
-    - name: Deploy to the environment
-      run: |
-        aws elasticbeanstalk update-environment \
-          --environment-name wp1-fall26-aws-env \
-          --version-label ${{ github.sha }}
+      - name: Upload the tested build as an artifact
+        uses: actions/upload-artifact@v4   # hands the exact tested files to the deploy job
+        with:
+          name: api-publish
+          path: ./publish
+
+  deploy:
+    needs: build-test                      # wait for build-test; skipped if it fails
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'   # only from main, never from a PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write                      # only this job may ask GitHub for an OIDC token for AWS
+    steps:
+      - name: Download the tested build
+        uses: actions/download-artifact@v5
+        with:
+          name: api-publish
+          path: ./publish
+
+      - name: Zip deployment package
+        run: |
+          cd ./publish
+          zip -r ../deploy.zip .
+
+      - name: Configure AWS credentials (OIDC, no long-lived keys)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE }}
+          aws-region: us-east-1
+
+      - name: Confirm identity
+        run: aws sts get-caller-identity
+
+      - name: Upload deployment package to the EB storage bucket
+        run: |
+          EB_BUCKET="elasticbeanstalk-us-east-1-407525819435"
+          echo "EB_BUCKET=$EB_BUCKET" >> "$GITHUB_ENV"
+          aws s3 cp deploy.zip "s3://$EB_BUCKET/wp1-fall26-aws/deploy-${{ github.sha }}.zip"
+
+      - name: Create application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name wp1-fall26-aws \
+            --version-label ${{ github.sha }} \
+            --source-bundle S3Bucket="${{ env.EB_BUCKET }}",S3Key="wp1-fall26-aws/deploy-${{ github.sha }}.zip"
+
+      - name: Deploy to the environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name wp1-fall26-aws-env \
+            --version-label ${{ github.sha }}

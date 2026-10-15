@@ -80,6 +80,6 @@ public class DocumentValidatorTests
 
         // Assert: only the extension rule fails, since size and content type are fine.
         Assert.Single(errors);
-        Assert.Contains("Banana", errors[0]);
+        Assert.Contains("Extension", errors[0]);
     }
 }
